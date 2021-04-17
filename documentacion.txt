@@ -1,0 +1,110 @@
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Apunte: Instalar websokets
+Ahora vamos a realizar la instalación de Laravel Websokets via Composer:
+
+composer require beyondcode/laravel-websockets
+Este paquete viene con una migración para almacenar información estadística mientras ejecuta su servidor WebSocket.
+
+Puede publicar el archivo de migración usando:
+
+php artisan vendor:publish --provider="BeyondCode\LaravelWebSockets\WebSocketsServiceProvider" --tag="migrations"
+Depues debemos correr las migraciones:
+
+php artisan migrate
+Ahroa vamos a publicar el archivo de configuración:
+
+php artisan vendor:publish --provider="BeyondCode\LaravelWebSockets\WebSocketsServiceProvider" --tag="config"
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Apunte: Configurar websockets
+El archivo de configuración tiene varias opciones, ahora solo vamos a modificar aquellas que necesitamos para nuestra aplicación de chat.
+
+Ubica la clave "apps", aquí podemos definir las credenciales de las aplicaciones. Websockest es multi-tenant lo que permite definir credenciales para múltiples aplicaciones y definir valores personalizados para cada una de ellas, en nuestro caso solo vamos a tener una.
+
+También puede observar que hay algunos valores para PUSHER, sin embargo, no vamos a emplear pusher, en el archivo .env, podemos definir cualquier valor para estas variables:
+
+Ejemplo:
+
+PUSHER_APP_ID=2Xk1VbYRUEXuf1DI5mrSYI1nZqMXM1Ij
+PUSHER_APP_KEY=Vd0yd4EISKreDCpLScks2dyeICOQPdXm
+PUSHER_APP_SECRET=cPsEKffi2YZtPftKzNjreEdBbUkWKAmC
+PUSHER_APP_CLUSTER=mt1
+Más abajo tenemos la clave path, la cual definie la URI para el dashboard de Websokets. También lo puede modificar por una ruta que empate con tu proyecto:
+
+'path' => 'admin/websockets',
+Esta ruta solo está disponible para el entorno local por defecto.
+
+Para verificar que todo esté funcionado apropiadamente, en una nueva termina, ejecuta el servidor de websokets:
+
+php artisan websockets:serve
+Ingresa a la ruta en el navegador:
+
+http://chat.test/admin/websockets
+Da clic en Connect y observa si se ha conseguido la conexión:
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Reemplazo dePusher
+La forma más fácil de usar Websockets es como reemplazo de pusher.
+
+Tanto websockets como el servidor HTTP tine una paridad de funciones completa con Pushery la API HTTP, además de contar con un panel de depuración para todas las solicitudes tanto entrantes como salientes.
+
+El primer paso es instalar el paquete oficial de Pusher
+
+composer require pusher/pusher-php-server "~4.0"
+Después debemos cambiar el Driver para el Broadcast de laravel en el archivo .env
+
+BROADCAST_DRIVER=pusher
+Después debemos realizar la configuración de Pusher.
+Accede al archivo de configuración /config/broadcasting.php y en connections > pusher sistituye los valores originales por lo siguinte:
+
+'pusher' => [
+    'driver' => 'pusher',
+    'key' => env('PUSHER_APP_KEY'),
+    'secret' => env('PUSHER_APP_SECRET'),
+    'app_id' => env('PUSHER_APP_ID'),
+    'options' => [
+        'cluster' => env('PUSHER_APP_CLUSTER'),
+        'encrypted' => true,
+        'host' => '127.0.0.1',
+        'port' => 6001,
+        'scheme' => 'http'
+    ],
+],
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Apunte: Instalar Laravel Echo
+Instalar Laravel Echo
+
+A continuación vamos a instalar las dependencias para laravel-echo y pusher-js
+
+npm install laravel-echo pusher-js
+Copy
+
+Después ingresa a /resources/js/bootstrap.js
+
+Reemplaza los comentarios para importar Echo:
+
+
+Por lo siguiente:
+
+import Echo from 'laravel-echo';
+ 
+window.Pusher = require('pusher-js');
+ 
+window.Echo = new Echo({
+    broadcaster: 'pusher',
+    key: process.env.MIX_PUSHER_APP_KEY,
+    // cluster: process.env.MIX_PUSHER_APP_CLUSTER,
+    wsHost: window.location.hostname,
+    wsPort: 6001,
+    forceTLS: false,
+    disableStats: true
+});
+Ahora vamos a verificar que esto funcione. Ejecuta
+
+npm run watch
+Deten el servidor de websockets y reinícialo con:
+
+php artisan websocket:serve
